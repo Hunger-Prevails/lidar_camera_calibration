@@ -2,6 +2,7 @@ find_package(Ceres CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
 find_package(indicators CONFIG REQUIRED)
+find_package(PCL CONFIG REQUIRED COMPONENTS COMMON IO FILTERS)
 
 add_library(calibrator calibrator.cpp)
 target_include_directories(calibrator PUBLIC ${CMAKE_SOURCE_DIR}/include)
@@ -18,4 +19,7 @@ target_link_libraries(
         opencv_imgcodecs
         opencv_calib3d
         indicators::indicators
+        pcl_COMMON
+        pcl_IO
+        pcl_FILTERS
 )
