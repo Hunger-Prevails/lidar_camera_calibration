@@ -1,0 +1,26 @@
+{
+    "name": "lidar-camera-calibration",
+    "version-string": "1.0.0",
+    "dependencies": [
+        "cxxopts",
+        "eigen3",
+        "ceres",
+        "pcl",
+        "indicators",
+        {
+            "name": "opencv4",
+            "default-features": false,
+            "features": [
+                "eigen",
+                "jpeg",
+                "png",
+                "tiff",
+                "calib3d"
+            ]
+        },
+        {
+            "name": "libigl",
+            "features": [ "opengl", "glfw" ]
+        }
+    ]
+}
