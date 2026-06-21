@@ -6,12 +6,7 @@ using PointT = pcl::PointXYZ;
 using CloudT = pcl::PointCloud<PointT>;
 using CloudPtr = CloudT::Ptr;
 
-void DiamondCalibrator::calibrate(std::vector<fs::path> image_paths, std::vector<fs::path> point_cloud_paths, Eigen::Matrix3d& intrinsics) {
-    std::cout << "To calibrate against diamond target..." << std::endl;
-    return;
-}
-
-void CylinderCalibrator::calibrate(std::vector<fs::path> image_paths, std::vector<fs::path> point_cloud_paths, Eigen::Matrix3d& intrinsics) {
-    std::cout << "To calibrate against cylinder target..." << std::endl;
+void CheckerboardCalibrator::calibrate(std::vector<std::pair<fs::path, fs::path>> image_cloud_pairs, Eigen::Matrix3d& intrinsics) {
+    std::cout << "To calibrate against checkerboard target..." << std::endl;
     return;
 }

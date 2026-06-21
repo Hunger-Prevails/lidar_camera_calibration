@@ -14,17 +14,6 @@ namespace fs = std::filesystem;
 using json = nlohmann::json;
 
 
-std::vector<fs::path> get_files_in_directory(const fs::path& directory) {
-    std::vector<fs::path> files;
-    for (const auto& entry : fs::directory_iterator(directory)) {
-        if (entry.is_regular_file()) {
-            files.push_back(entry.path());
-        }
-    }
-    return files;
-}
-
-
 Eigen::Matrix3d load_intrinsics(const fs::path& filepath) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
@@ -54,45 +43,66 @@ Eigen::Matrix3d load_intrinsics(const fs::path& filepath) {
 }
 
 
-enum class Mode {Diamond, Cylinder};
-
-Mode parse_mode(const std::string& text) {
-    if (text == "Diamond") {
-        return Mode::Diamond;
-    }
-    if (text == "Cylinder") {
-        return Mode::Cylinder;
+std::vector<std::pair<fs::path, fs::path>> load_image_cloud_pairs(const fs::path& dataset_path, const fs::path& metadata_path) {
+    std::ifstream file(metadata_path);
+    if (!file.is_open()) {
+        throw std::invalid_argument("Failed to open file: " + metadata_path.string());
     }
 
-    throw std::invalid_argument("invalid mode: " + text);
+    json metadata;
+    file >> metadata;
+    file.close();
+
+    std::vector<std::pair<fs::path, fs::path>> image_cloud_pairs;
+
+    if (!metadata.contains("selected_pairs") || !metadata["selected_pairs"].is_array()) {
+        throw std::invalid_argument("Invalid JSON format: expected 'selected_pairs' to be an array");
+    }
+
+    for (const auto& pair : metadata["selected_pairs"]) {
+        if (!pair.contains("image") || !pair["image"].contains("file")) {
+            throw std::invalid_argument("Invalid JSON format: each pair must contain field 'image'");
+        }
+        auto image_path = dataset_path / pair["image"]["file"].get<fs::path>();
+
+        if (!fs::exists(image_path)) {
+            throw std::invalid_argument("Image file does not exist: " + image_path.string());
+        }
+
+        if (!pair.contains("pointcloud") || !pair["pointcloud"].contains("file")) {
+            throw std::invalid_argument("Invalid JSON format: each pair must contain field 'pointcloud'");
+        }
+        auto cloud_path = dataset_path / pair["pointcloud"]["file"].get<fs::path>();
+
+        if (!fs::exists(cloud_path)) {
+            throw std::invalid_argument("Point cloud file does not exist: " + cloud_path.string());
+        }
+
+        image_cloud_pairs.push_back(std::make_pair(image_path, cloud_path));
+    }
+
+    return image_cloud_pairs;
 }
 
 int main(int argc, char *argv[]) {
     cxxopts::Options options("lidar-camera-calibration", "options to configure lidar-camera calibration pipeline");
 
-    options.add_options()("mode", "Calibration mode", cxxopts::value<std::string>());
-    options.add_options()("images", "Path to the image to process", cxxopts::value<fs::path>());
-    options.add_options()("point-clouds", "Path to the point cloud to process", cxxopts::value<fs::path>());
+    options.add_options()("dataset", "Path to the dataset directory", cxxopts::value<fs::path>());
+    options.add_options()("metadata", "Path to the metadata file", cxxopts::value<fs::path>());
     options.add_options()("intrinsics", "Path to the intrinsics file", cxxopts::value<fs::path>());
     options.add_options()("write-path", "Path to write outputs to", cxxopts::value<fs::path>()->default_value("outputs"));
 
     auto args = options.parse(argc, argv);
 
-    auto mode = parse_mode(args["mode"].as<std::string>());
+    auto calibrator = std::make_unique<CheckerboardCalibrator>();
 
-    std::unique_ptr<Calibrator> calibrator;
+    auto dataset_path = args["dataset"].as<fs::path>();
+    auto metadata_path = args["metadata"].as<fs::path>();
 
-    if (mode == Mode::Diamond) {
-        calibrator = std::make_unique<DiamondCalibrator>();
-    } else {
-        calibrator = std::make_unique<CylinderCalibrator>();
-    }
-
-    auto image_paths = get_files_in_directory(args["images"].as<fs::path>());
-    auto point_cloud_paths = get_files_in_directory(args["point-clouds"].as<fs::path>());
+    auto image_cloud_pairs = load_image_cloud_pairs(dataset_path, metadata_path);
 
     auto intrinsics = load_intrinsics(args["intrinsics"].as<fs::path>());
 
-    calibrator->calibrate(image_paths, point_cloud_paths, intrinsics);
+    calibrator->calibrate(image_cloud_pairs, intrinsics);
     return 0;
 }

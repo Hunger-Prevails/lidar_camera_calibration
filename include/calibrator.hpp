@@ -9,21 +9,13 @@ public:
     Calibrator() = default;
     virtual ~Calibrator() = default;
 
-    virtual void calibrate(std::vector<fs::path> image_paths, std::vector<fs::path> point_cloud_paths, Eigen::Matrix3d& intrinsics) = 0;
+    virtual void calibrate(std::vector<std::pair<fs::path, fs::path>> image_cloud_pairs, Eigen::Matrix3d& intrinsics) = 0;
 };
 
-class DiamondCalibrator : public Calibrator {
+class CheckerboardCalibrator : public Calibrator {
 public:
-    DiamondCalibrator() = default;
-    ~DiamondCalibrator() override = default;
+    CheckerboardCalibrator() = default;
+    ~CheckerboardCalibrator() override = default;
 
-    void calibrate(std::vector<fs::path> image_paths, std::vector<fs::path> point_cloud_paths, Eigen::Matrix3d& intrinsics) override;
-};
-
-class CylinderCalibrator : public Calibrator {
-public:
-    CylinderCalibrator() = default;
-    ~CylinderCalibrator() override = default;
-
-    void calibrate(std::vector<fs::path> image_paths, std::vector<fs::path> point_cloud_paths, Eigen::Matrix3d& intrinsics) override;
+    void calibrate(std::vector<std::pair<fs::path, fs::path>> image_cloud_pairs, Eigen::Matrix3d& intrinsics) override;
 };
