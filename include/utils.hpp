@@ -14,7 +14,6 @@ using RowMatrixXd =
 struct EigenCloud {
     RowMatrixXd values;
     std::vector<std::string> column_names;
-    std::vector<std::size_t> source_indices;
 
     void summary() const;
 };
@@ -36,10 +35,7 @@ T loadUnaligned(const std::uint8_t* ptr) {
 
 double readScalar(const std::uint8_t* ptr, std::uint8_t datatype);
 
-double readFieldAtPoint(
-    const std::uint8_t* point_ptr,
-    const pcl::PCLPointField& field
-);
+double readColumn(const std::uint8_t* ptr, const ScalarColumn& column);
 
 std::size_t datatypeSize(std::uint8_t datatype);
 

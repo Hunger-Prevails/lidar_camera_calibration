@@ -79,8 +79,6 @@ EigenCloud Calibrator::to_eigen(const pcl::PCLPointCloud2& cloud) {
 
     for (const auto& column : columns) result.column_names.push_back(column.name);
 
-    result.source_indices.resize(num_points);
-
     result.values.resize(
         static_cast<Eigen::Index>(num_points),
         static_cast<Eigen::Index>(num_cols)
@@ -102,12 +100,8 @@ EigenCloud Calibrator::to_eigen(const pcl::PCLPointCloud2& cloud) {
                 result.values(
                     static_cast<Eigen::Index>(source_index),
                     static_cast<Eigen::Index>(j)
-                ) = readScalar(
-                    point_ptr + column.byte_offset,
-                    column.datatype
-                );
+                ) = readColumn(point_ptr, column);
             }
-            result.source_indices.push_back(source_index);
         }
     }
     return result;

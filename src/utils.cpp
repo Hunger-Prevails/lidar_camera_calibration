@@ -53,11 +53,8 @@ double readScalar(const std::uint8_t* ptr, std::uint8_t datatype) {
     }
 }
 
-double readFieldAtPoint(
-    const std::uint8_t* point_ptr,
-    const pcl::PCLPointField& field
-) {
-    return readScalar(point_ptr + field.offset, field.datatype);
+double readColumn(const std::uint8_t* ptr, const ScalarColumn& column) {
+    return readScalar(ptr + column.byte_offset, column.datatype);
 }
 
 std::size_t datatypeSize(std::uint8_t datatype) {
