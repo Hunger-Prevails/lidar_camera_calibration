@@ -5,8 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_subdirectory(apps)
 add_subdirectory(src)
+add_subdirectory(apps)
 add_subdirectory(tests)
 
 if(EXISTS ${CMAKE_SOURCE_DIR}/res)

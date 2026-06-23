@@ -87,14 +87,32 @@ std::vector<std::pair<fs::path, fs::path>> load_image_cloud_pairs(const fs::path
 int main(int argc, char *argv[]) {
     cxxopts::Options options("lidar-camera-calibration", "options to configure lidar-camera calibration pipeline");
 
-    options.add_options()("dataset", "Path to the dataset directory", cxxopts::value<fs::path>());
-    options.add_options()("metadata", "Path to the metadata file", cxxopts::value<fs::path>());
-    options.add_options()("intrinsics", "Path to the intrinsics file", cxxopts::value<fs::path>());
-    options.add_options()("write-path", "Path to write outputs to", cxxopts::value<fs::path>()->default_value("outputs"));
+    options.add_options()
+        ("dataset", "Path to the dataset directory", cxxopts::value<fs::path>())
+        ("metadata", "Path to the metadata file", cxxopts::value<fs::path>())
+        ("intrinsics", "Path to the intrinsics file", cxxopts::value<fs::path>())
+        ("write-path", "Path to write outputs to", cxxopts::value<fs::path>()->default_value("outputs"))
+        ("center", "Spherical crop center in LiDAR frame: x,y,z", cxxopts::value<std::vector<double>>()->default_value("0.0,0.0,0.0"))
+        ("radius", "Spherical crop radius in meters", cxxopts::value<double>()->default_value("2.0"))
+        ("help", "Print help");
 
     auto args = options.parse(argc, argv);
 
-    auto calibrator = std::make_unique<CheckerboardCalibrator>();
+    if (args.count("help")) {
+        std::cout << options.help() << std::endl;
+        return 0;
+    }
+    if (!args.count("dataset") || !args.count("metadata") || !args.count("intrinsics")) {
+        std::cerr << "Error: --dataset, --metadata, and --intrinsics are required arguments." << std::endl;
+        std::cout << options.help() << std::endl;
+        return 1;
+    }
+
+    auto center = args["center"].as<std::vector<double>>();
+
+    Eigen::Vector3d center_eigen(center[0], center[1], center[2]);
+
+    auto calibrator = std::make_unique<CheckerboardCalibrator>(center_eigen, args["radius"].as<double>());
 
     auto dataset_path = args["dataset"].as<fs::path>();
     auto metadata_path = args["metadata"].as<fs::path>();

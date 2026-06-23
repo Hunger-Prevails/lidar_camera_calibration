@@ -1,10 +1,29 @@
+# pragma once
+
 # include <vector>
 # include <Eigen/Dense>
 # include <filesystem>
 
+# include <pcl/PCLPointCloud2.h>
+# include <pcl/PCLPointField.h>
+# include <pcl/io/pcd_io.h>
+
+# include "utils.hpp"
+
 namespace fs = std::filesystem;
 
 class Calibrator {
+public:
+    static const std::unordered_set<std::string> core_fields;
+
+protected:
+    static void append_as_column(std::vector<ScalarColumn>& columns, const pcl::PCLPointField& field);
+    static std::vector<ScalarColumn> makeCanonicalColumns(const pcl::PCLPointCloud2& cloud);
+
+    pcl::PCLPointCloud2 load_point_cloud(const fs::path& pcd_path);
+
+    EigenCloud to_eigen(const pcl::PCLPointCloud2& cloud);
+
 public:
     Calibrator() = default;
     virtual ~Calibrator() = default;
@@ -14,7 +33,11 @@ public:
 
 class CheckerboardCalibrator : public Calibrator {
 public:
-    CheckerboardCalibrator() = default;
+    Eigen::Vector3d sphere_center;
+    double sphere_radius;
+
+public:
+    CheckerboardCalibrator(Eigen::Vector3d sphere_center, double sphere_radius);
     ~CheckerboardCalibrator() override = default;
 
     void calibrate(std::vector<std::pair<fs::path, fs::path>> image_cloud_pairs, Eigen::Matrix3d& intrinsics) override;
