@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
         ("intrinsics", "Path to the intrinsics file", cxxopts::value<fs::path>())
         ("write-path", "Path to write outputs to", cxxopts::value<fs::path>()->default_value("outputs"))
         ("center", "Spherical crop center in LiDAR frame: x,y,z", cxxopts::value<std::vector<double>>()->default_value("0.0,0.0,0.0"))
-        ("radius", "Spherical crop radius in meters", cxxopts::value<double>()->default_value("2.0"))
+        ("radius", "Spherical crop radius in meters", cxxopts::value<double>()->default_value("3.0"))
         ("help", "Print help");
 
     auto args = options.parse(argc, argv);
@@ -112,7 +112,9 @@ int main(int argc, char *argv[]) {
 
     Eigen::Vector3d center_eigen(center[0], center[1], center[2]);
 
-    auto calibrator = std::make_unique<CheckerboardCalibrator>(center_eigen, args["radius"].as<double>());
+    auto calibrator = std::make_unique<CheckerboardCalibrator>(
+        args["write-path"].as<fs::path>(), center_eigen, args["radius"].as<double>()
+    );
 
     auto dataset_path = args["dataset"].as<fs::path>();
     auto metadata_path = args["metadata"].as<fs::path>();
@@ -121,6 +123,13 @@ int main(int argc, char *argv[]) {
 
     auto intrinsics = load_intrinsics(args["intrinsics"].as<fs::path>());
 
-    calibrator->calibrate(image_cloud_pairs, intrinsics);
+    try {
+        calibrator->calibrate(image_cloud_pairs, intrinsics);
+        return 0;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
     return 0;
 }

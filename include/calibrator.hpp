@@ -13,10 +13,9 @@
 namespace fs = std::filesystem;
 
 class Calibrator {
-public:
-    static const std::unordered_set<std::string> core_fields;
-
 protected:
+    fs::path write_path;
+
     static void append_as_column(std::vector<ScalarColumn>& columns, const pcl::PCLPointField& field);
     static std::vector<ScalarColumn> makeCanonicalColumns(const pcl::PCLPointCloud2& cloud);
 
@@ -25,7 +24,7 @@ protected:
     EigenCloud to_eigen(const pcl::PCLPointCloud2& cloud);
 
 public:
-    Calibrator() = default;
+    Calibrator(fs::path write_path);
     virtual ~Calibrator() = default;
 
     virtual void calibrate(std::vector<std::pair<fs::path, fs::path>> image_cloud_pairs, Eigen::Matrix3d& intrinsics) = 0;
@@ -37,7 +36,7 @@ public:
     double sphere_radius;
 
 public:
-    CheckerboardCalibrator(Eigen::Vector3d sphere_center, double sphere_radius);
+    CheckerboardCalibrator(fs::path write_path, Eigen::Vector3d sphere_center, double sphere_radius);
     ~CheckerboardCalibrator() override = default;
 
     void calibrate(std::vector<std::pair<fs::path, fs::path>> image_cloud_pairs, Eigen::Matrix3d& intrinsics) override;

@@ -1,5 +1,5 @@
 # include <Eigen/Dense>
-
+# include <indicators/progress_bar.hpp>
 # include <pcl/PCLPointCloud2.h>
 # include <pcl/PCLPointField.h>
 # include <pcl/io/pcd_io.h>
@@ -15,6 +15,7 @@
 # include <string>
 # include <vector>
 # include <unordered_set>
+# include <opencv2/opencv.hpp>
 
 # include "calibrator.hpp"
 # include "utils.hpp"
@@ -24,8 +25,6 @@ namespace fs = std::filesystem;
 using PointT = pcl::PointXYZ;
 using CloudT = pcl::PointCloud<PointT>;
 using CloudPtr = CloudT::Ptr;
-
-const std::unordered_set<std::string> Calibrator::core_fields{"x", "y", "z"};
 
 void Calibrator::append_as_column(std::vector<ScalarColumn>& columns, const pcl::PCLPointField& field) {
     const std::uint32_t count = std::max<std::uint32_t>(field.count, 1);
@@ -45,11 +44,12 @@ void Calibrator::append_as_column(std::vector<ScalarColumn>& columns, const pcl:
 std::vector<ScalarColumn> Calibrator::makeCanonicalColumns(const pcl::PCLPointCloud2& cloud) {
     std::vector<ScalarColumn> columns;
 
-    for (const auto& name : Calibrator::core_fields) {
-        Calibrator::append_as_column(columns, find_field(cloud, name));
-    }
+    auto coord_field_names = EigenCloud::get_coord_field_names();
+
+    for (const auto& name : coord_field_names) Calibrator::append_as_column(columns, find_field(cloud, name));
+
     for (const auto& field : cloud.fields) {
-        if (Calibrator::core_fields.count(field.name) > 0) continue;
+        if (coord_field_names.count(field.name) > 0) continue;
 
         Calibrator::append_as_column(columns, field);
     }
@@ -107,27 +107,44 @@ EigenCloud Calibrator::to_eigen(const pcl::PCLPointCloud2& cloud) {
     return result;
 }
 
+Calibrator::Calibrator(fs::path write_path) : write_path(std::move(write_path)) {
+    if (!fs::exists(this->write_path)) {
+        fs::create_directories(this->write_path);
+    }
+}
+
 CheckerboardCalibrator::CheckerboardCalibrator(
-    Eigen::Vector3d sphere_center, double sphere_radius) : sphere_center(sphere_center), sphere_radius(sphere_radius) {}
+    fs::path write_path, Eigen::Vector3d sphere_center, double sphere_radius
+) : Calibrator(std::move(write_path)), sphere_center(sphere_center), sphere_radius(sphere_radius) {}
 
 void CheckerboardCalibrator::calibrate(std::vector<std::pair<fs::path, fs::path>> image_cloud_pairs, Eigen::Matrix3d& intrinsics) {
+    indicators::ProgressBar bar{
+        indicators::option::MaxProgress{image_cloud_pairs.size()},
+        indicators::option::PrefixText{"=> Loads and crops point clouds:"},
+        indicators::option::Start{"["},
+        indicators::option::Fill{"="},
+        indicators::option::Lead{">"},
+        indicators::option::End{"]"},
+    };
     for (const auto& [image_path, point_cloud_path] : image_cloud_pairs) {
+        bar.tick();
+
+        auto write_path = this->write_path / image_path.stem();
+
+        if (!fs::exists(write_path)) fs::create_directories(write_path);
+
         auto point_cloud = load_point_cloud(point_cloud_path);
 
-        std::cout << "PCL point cloud:" << std::endl;
-        std::cout << "=> width: " << point_cloud.width << std::endl;
-        std::cout << "=> height: " << point_cloud.height << std::endl;
-        std::cout << "=> point_step: " << point_cloud.point_step << std::endl;
-        std::cout << "=> row_step: " << point_cloud.row_step << std::endl;
-        std::cout << "=> fields: ";
+        auto eigen_cloud = to_eigen(point_cloud);
 
-        for (const auto& field : point_cloud.fields) {
-            std::cout << " " << field.name;
-        }
-        std::cout << std::endl;
+        eigen_cloud.export_to(write_path / (point_cloud_path.stem().string() + ".pcd"));
 
-        const auto cropped = to_eigen(point_cloud);
+        auto cropped_cloud = eigen_cloud.sphere_crop(sphere_center, sphere_radius);
 
-        cropped.summary();
+        cropped_cloud.export_to(write_path / (point_cloud_path.stem().string() + "_cropped.pcd"));
+
+        auto image = cv::imread(image_path.string(), cv::IMREAD_COLOR);
+
+        cv::imwrite((write_path / image_path.filename()).string(), image);
     }
 }
