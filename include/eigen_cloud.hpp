@@ -1,0 +1,42 @@
+# pragma once
+
+# include <unordered_map>
+# include <unordered_set>
+# include <Eigen/Dense>
+# include <pcl/PCLPointCloud2.h>
+# include <pcl/PCLPointField.h>
+# include <pcl/io/pcd_io.h>
+# include <stdexcept>
+# include <cstdint>
+# include <cstring>
+# include <iostream>
+# include <iomanip>
+# include <fstream>
+# include <filesystem>
+
+namespace fs = std::filesystem;
+
+using RowMatrixXd =
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
+struct EigenCloud {
+protected:
+    static const std::vector<std::pair<std::string_view, Eigen::Index>> COORD_FIELDS;
+
+public:
+    RowMatrixXd values;
+    std::vector<std::string> column_names;
+
+    static const std::unordered_set<std::string_view> get_coord_field_names();
+    static const std::unordered_map<std::string_view, Eigen::Index> get_index_map();
+
+    void summary() const;
+    void export_to(const fs::path& path) const;
+
+    EigenCloud sphere_crop(
+        const Eigen::Vector3d& center,
+        double radius
+    ) const;
+
+    EigenCloud select_rows(const std::vector<Eigen::Index>& rows) const;
+};

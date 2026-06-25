@@ -4,7 +4,7 @@ find_package(OpenCV CONFIG REQUIRED)
 find_package(indicators CONFIG REQUIRED)
 find_package(PCL CONFIG REQUIRED COMPONENTS COMMON IO FILTERS)
 
-add_library(calibrator calibrator.cpp utils.cpp)
+add_library(calibrator calibrator.cpp eigen_cloud.cpp utils.cpp)
 target_include_directories(calibrator PUBLIC ${CMAKE_SOURCE_DIR}/include)
 if(MSVC)
     target_compile_options(calibrator PRIVATE /EHsc)

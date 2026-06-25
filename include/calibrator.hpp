@@ -8,6 +8,7 @@
 # include <pcl/PCLPointField.h>
 # include <pcl/io/pcd_io.h>
 
+# include "eigen_cloud.hpp"
 # include "utils.hpp"
 
 namespace fs = std::filesystem;

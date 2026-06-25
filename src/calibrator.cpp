@@ -18,6 +18,7 @@
 # include <opencv2/opencv.hpp>
 
 # include "calibrator.hpp"
+# include "eigen_cloud.hpp"
 # include "utils.hpp"
 
 namespace fs = std::filesystem;
