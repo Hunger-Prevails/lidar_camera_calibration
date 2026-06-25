@@ -90,6 +90,31 @@ EigenCloudView EigenCloudView::compute_inlier_view(const PlaneModel& plane, doub
     return result;
 }
 
+EigenCloudView EigenCloudView::subtract(const EigenCloudView& other) const {
+    if (!cloud) {
+        throw std::runtime_error("null cloud pointer");
+    }
+
+    if (cloud != other.cloud) {
+        throw std::runtime_error("clouds must be the same for subtraction");
+    }
+
+    std::unordered_set<Eigen::Index> other_rows_set(other.rows.begin(), other.rows.end());
+
+    EigenCloudView result;
+    result.cloud = cloud;
+
+    size_t count_diff = 0;
+
+    for (const auto& row : rows) if (other_rows_set.count(row) == 0) count_diff++;
+
+    result.rows.reserve(count_diff);
+
+    for (const auto& row : rows) if (other_rows_set.count(row) == 0) result.rows.push_back(row);
+
+    return result;
+}
+
 PlaneModel EigenCloudView::fit_plane() const {
     if (!cloud) {
         throw std::runtime_error("null cloud pointer");

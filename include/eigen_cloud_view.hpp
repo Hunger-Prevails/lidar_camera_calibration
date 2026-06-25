@@ -21,5 +21,7 @@ struct EigenCloudView {
 
     EigenCloudView compute_inlier_view(const PlaneModel& plane, double threshold) const;
 
+    EigenCloudView subtract(const EigenCloudView& other) const;
+
     PlaneModel fit_plane() const;
 };
