@@ -11,6 +11,4 @@ struct PlaneCandidate {
     EigenCloudView inliers;
 
     double rms_error = 0.0;
-
-    Eigen::ArrayXd distances_to_plane(const EigenCloudView& view) const;
 };

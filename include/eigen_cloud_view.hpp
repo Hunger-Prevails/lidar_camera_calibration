@@ -11,9 +11,15 @@ struct EigenCloudView {
 
     Eigen::Index size() const;
 
-    Eigen::Vector3d xyzAt(Eigen::Index local_row) const;
+    Eigen::Vector3d xyz_at(Eigen::Index local_row) const;
 
-    EigenCloud toEigenCloud() const;
+    EigenCloud to_eigen_cloud() const;
 
-    static EigenCloudView fromEigenCloud(std::shared_ptr<const EigenCloud> cloud);
+    static EigenCloudView from_eigen_cloud(std::shared_ptr<const EigenCloud> cloud);
+
+    Eigen::ArrayXd compute_distances_to(const PlaneModel& plane) const;
+
+    EigenCloudView compute_inlier_view(const PlaneModel& plane, double threshold) const;
+
+    PlaneModel fit_plane() const;
 };

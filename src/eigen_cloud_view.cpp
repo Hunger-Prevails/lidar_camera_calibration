@@ -1,10 +1,11 @@
 # include "eigen_cloud_view.hpp"
+# include "utils.hpp"
 
 Eigen::Index EigenCloudView::size() const {
     return static_cast<Eigen::Index>(rows.size());
 }
 
-Eigen::Vector3d EigenCloudView::xyzAt(Eigen::Index local_row) const {
+Eigen::Vector3d EigenCloudView::xyz_at(Eigen::Index local_row) const {
     if (cloud == nullptr) {
         throw std::runtime_error("null cloud pointer");
     }
@@ -12,10 +13,10 @@ Eigen::Vector3d EigenCloudView::xyzAt(Eigen::Index local_row) const {
     const Eigen::Index global_row =
         rows[static_cast<std::size_t>(local_row)];
 
-    return cloud->xyzAt(global_row);
+    return cloud->xyz_at(global_row);
 }
 
-EigenCloud EigenCloudView::toEigenCloud() const {
+EigenCloud EigenCloudView::to_eigen_cloud() const {
     if (cloud == nullptr) {
         throw std::runtime_error("null cloud pointer");
     }
@@ -23,7 +24,7 @@ EigenCloud EigenCloudView::toEigenCloud() const {
     return cloud->select_rows(rows);
 }
 
-EigenCloudView EigenCloudView::fromEigenCloud(std::shared_ptr<const EigenCloud> cloud) {
+EigenCloudView EigenCloudView::from_eigen_cloud(std::shared_ptr<const EigenCloud> cloud) {
     if (!cloud) {
         throw std::runtime_error("input cloud is null");
     }
@@ -35,4 +36,79 @@ EigenCloudView EigenCloudView::fromEigenCloud(std::shared_ptr<const EigenCloud> 
     std::iota(view.rows.begin(), view.rows.end(), Eigen::Index{0});
 
     return view;
+}
+
+Eigen::ArrayXd EigenCloudView::compute_distances_to(const PlaneModel& plane) const {
+    if (!cloud) {
+        throw std::runtime_error("null cloud pointer");
+    }
+
+    if (rows.empty()) {
+        return Eigen::ArrayXd{};
+    }
+
+    const auto index_map = EigenCloud::get_index_map();
+
+    const Eigen::Index x_col = index_map.at("x");
+    const Eigen::Index y_col = index_map.at("y");
+    const Eigen::Index z_col = index_map.at("z");
+
+    const Eigen::Map<const Eigen::Array<Eigen::Index, Eigen::Dynamic, 1>> row_indices(
+        rows.data(), static_cast<Eigen::Index>(rows.size())
+    );
+
+    const auto& values = cloud->values;
+
+    Eigen::ArrayXd distances =
+        values(row_indices, x_col).array() * plane.normal.x()
+      + values(row_indices, y_col).array() * plane.normal.y()
+      + values(row_indices, z_col).array() * plane.normal.z()
+      - plane.rho;
+
+    return distances;
+}
+
+EigenCloudView EigenCloudView::compute_inlier_view(const PlaneModel& plane, double threshold) const {
+    if (!cloud) {
+        throw std::runtime_error("null cloud pointer");
+    }
+
+    const auto distances = compute_distances_to(plane);
+
+    const Eigen::Array<bool, Eigen::Dynamic, 1> mask = distances.abs() <= threshold;
+
+    auto to_keep = argwhere(mask);
+
+    EigenCloudView result;
+    result.cloud = cloud;
+    result.rows.resize(static_cast<std::size_t>(to_keep.size()));
+
+    for (std::size_t i = 0; i < to_keep.size(); ++i) {
+        result.rows[i] = rows[static_cast<std::size_t>(to_keep[i])];
+    }
+
+    return result;
+}
+
+PlaneModel EigenCloudView::fit_plane() const {
+    if (!cloud) {
+        throw std::runtime_error("null cloud pointer");
+    }
+
+    const auto index_map = EigenCloud::get_index_map();
+
+    const Eigen::Index x_col = index_map.at("x");
+    const Eigen::Index y_col = index_map.at("y");
+    const Eigen::Index z_col = index_map.at("z");
+
+    const Eigen::Map<const Eigen::Array<Eigen::Index, Eigen::Dynamic, 1>> row_indices(
+        rows.data(), static_cast<Eigen::Index>(rows.size())
+    );
+
+    RowMatrixXd points(rows.size(), 3);
+    points.col(0) = cloud->values(row_indices, x_col);
+    points.col(1) = cloud->values(row_indices, y_col);
+    points.col(2) = cloud->values(row_indices, z_col);
+
+    return PlaneModel::fit_from_points(points);
 }

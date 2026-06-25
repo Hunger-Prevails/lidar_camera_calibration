@@ -132,7 +132,7 @@ EigenCloud EigenCloud::sphere_crop(
     return result;
 }
 
-Eigen::Vector3d EigenCloud::xyzAt(Eigen::Index row) const {
+Eigen::Vector3d EigenCloud::xyz_at(Eigen::Index row) const {
     auto index_map = EigenCloud::get_index_map();
 
     const Eigen::Index x_col = index_map.at("x");
