@@ -39,6 +39,8 @@ public:
         const Eigen::Vector3d& center,
         double radius
     ) const;
+
+    EigenCloud select_rows(const std::vector<Eigen::Index>& rows) const;
 };
 
 struct ScalarColumn {

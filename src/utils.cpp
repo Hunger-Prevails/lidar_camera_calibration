@@ -143,6 +143,24 @@ EigenCloud EigenCloud::sphere_crop(
     return result;
 }
 
+EigenCloud EigenCloud::select_rows(const std::vector<Eigen::Index>& rows) const {
+    EigenCloud result;
+    result.column_names = column_names;
+
+    if (rows.empty()) {
+        result.values.resize(0, values.cols());
+        return result;
+    }
+
+    const Eigen::Map<const Eigen::Array<Eigen::Index, Eigen::Dynamic, 1>> row_indices(
+        rows.data(), static_cast<Eigen::Index>(rows.size())
+    );
+
+    result.values = values(row_indices, Eigen::placeholders::all);
+
+    return result;
+}
+
 ScalarColumn::ScalarColumn(std::string name, std::size_t byte_offset, std::uint8_t datatype)
     : name(std::move(name)), byte_offset(byte_offset), datatype(datatype) {};
 
