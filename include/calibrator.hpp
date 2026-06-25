@@ -22,7 +22,7 @@ protected:
 
     pcl::PCLPointCloud2 load_point_cloud(const fs::path& pcd_path);
 
-    EigenCloud to_eigen(const pcl::PCLPointCloud2& cloud);
+    std::shared_ptr<const EigenCloud> to_eigen(const pcl::PCLPointCloud2& cloud);
 
 public:
     Calibrator(fs::path write_path);

@@ -68,22 +68,18 @@ pcl::PCLPointCloud2 Calibrator::load_point_cloud(const fs::path& pcd_path) {
     return cloud;
 }
 
-EigenCloud Calibrator::to_eigen(const pcl::PCLPointCloud2& cloud) {
+std::shared_ptr<const EigenCloud> Calibrator::to_eigen(const pcl::PCLPointCloud2& cloud) {
     const auto columns = Calibrator::makeCanonicalColumns(cloud);
 
     const std::size_t num_cols = columns.size();
     const std::size_t num_points = static_cast<std::size_t>(cloud.width) * static_cast<std::size_t>(cloud.height);
 
-    EigenCloud result;
+    auto column_names = std::vector<std::string>();
+    column_names.reserve(num_cols);
 
-    result.column_names.reserve(num_cols);
+    for (const auto& column : columns) column_names.push_back(column.name);
 
-    for (const auto& column : columns) result.column_names.push_back(column.name);
-
-    result.values.resize(
-        static_cast<Eigen::Index>(num_points),
-        static_cast<Eigen::Index>(num_cols)
-    );
+    RowMatrixXd values(static_cast<Eigen::Index>(num_points), static_cast<Eigen::Index>(num_cols));
 
     const std::uint8_t* data = cloud.data.data();
 
@@ -98,14 +94,14 @@ EigenCloud Calibrator::to_eigen(const pcl::PCLPointCloud2& cloud) {
             for (std::size_t j = 0; j < num_cols; ++j) {
                 const auto& column = columns[j];
 
-                result.values(
+                values(
                     static_cast<Eigen::Index>(source_index),
                     static_cast<Eigen::Index>(j)
                 ) = readColumn(point_ptr, column);
             }
         }
     }
-    return result;
+    return std::make_shared<const EigenCloud>(std::move(values), std::move(column_names));
 }
 
 Calibrator::Calibrator(fs::path write_path) : write_path(std::move(write_path)) {
@@ -126,6 +122,7 @@ void CheckerboardCalibrator::calibrate(std::vector<std::pair<fs::path, fs::path>
         indicators::option::Fill{"="},
         indicators::option::Lead{">"},
         indicators::option::End{"]"},
+        indicators::option::ShowPercentage{true},
     };
     for (const auto& [image_path, point_cloud_path] : image_cloud_pairs) {
         bar.tick();
@@ -138,11 +135,12 @@ void CheckerboardCalibrator::calibrate(std::vector<std::pair<fs::path, fs::path>
 
         auto eigen_cloud = to_eigen(point_cloud);
 
-        eigen_cloud.export_to(write_path / (point_cloud_path.stem().string() + ".pcd"));
+        eigen_cloud->export_to(write_path / (point_cloud_path.stem().string() + ".pcd"));
 
-        auto cropped_cloud = eigen_cloud.sphere_crop(sphere_center, sphere_radius);
+        auto cropped_cloud = std::make_shared<const EigenCloud>(eigen_cloud->sphere_crop(sphere_center, sphere_radius));
 
-        cropped_cloud.export_to(write_path / (point_cloud_path.stem().string() + "_cropped.pcd"));
+        cropped_cloud->summary();
+        cropped_cloud->export_to(write_path / (point_cloud_path.stem().string() + "_cropped.pcd"));
 
         auto image = cv::imread(image_path.string(), cv::IMREAD_COLOR);
 

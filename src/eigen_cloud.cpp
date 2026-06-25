@@ -29,6 +29,9 @@ const std::unordered_map<std::string_view, Eigen::Index> EigenCloud::get_index_m
     return result;
 }
 
+EigenCloud::EigenCloud(RowMatrixXd values_, std::vector<std::string> column_names_)
+    : values(std::move(values_)), column_names(std::move(column_names_)) {}
+
 void EigenCloud::summary() const {
     std::cout << "Eigen point cloud:" << std::endl;
     std::cout << "=> rows: " << this->values.rows() << std::endl;
