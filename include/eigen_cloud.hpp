@@ -41,5 +41,7 @@ public:
         double radius
     ) const;
 
+    Eigen::Vector3d xyzAt(Eigen::Index row) const;
+
     EigenCloud select_rows(const std::vector<Eigen::Index>& rows) const;
 };

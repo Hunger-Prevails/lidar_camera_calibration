@@ -132,6 +132,20 @@ EigenCloud EigenCloud::sphere_crop(
     return result;
 }
 
+Eigen::Vector3d EigenCloud::xyzAt(Eigen::Index row) const {
+    auto index_map = EigenCloud::get_index_map();
+
+    const Eigen::Index x_col = index_map.at("x");
+    const Eigen::Index y_col = index_map.at("y");
+    const Eigen::Index z_col = index_map.at("z");
+
+    return Eigen::Vector3d{
+        values(row, x_col),
+        values(row, y_col),
+        values(row, z_col)
+    };
+}
+
 EigenCloud EigenCloud::select_rows(const std::vector<Eigen::Index>& rows) const {
     EigenCloud result;
     result.column_names = column_names;
