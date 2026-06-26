@@ -9,6 +9,9 @@ struct EigenCloudView {
     std::shared_ptr<const EigenCloud> cloud;
     std::vector<Eigen::Index> rows;
 
+    EigenCloudView() = delete;
+    EigenCloudView(std::shared_ptr<const EigenCloud> cloud_, std::vector<Eigen::Index> rows_);
+
     Eigen::Index size() const;
 
     Eigen::Vector3d xyz_at(Eigen::Index local_row) const;

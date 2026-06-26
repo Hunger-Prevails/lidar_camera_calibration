@@ -1,6 +1,10 @@
 # include "eigen_cloud_view.hpp"
 # include "utils.hpp"
 
+EigenCloudView::EigenCloudView(
+    std::shared_ptr<const EigenCloud> cloud_, std::vector<Eigen::Index> rows_
+) : cloud(std::move(cloud_)), rows(std::move(rows_)) {}
+
 Eigen::Index EigenCloudView::size() const {
     return static_cast<Eigen::Index>(rows.size());
 }
@@ -29,13 +33,11 @@ EigenCloudView EigenCloudView::from_eigen_cloud(std::shared_ptr<const EigenCloud
         throw std::runtime_error("input cloud is null");
     }
 
-    EigenCloudView view;
-    view.cloud = std::move(cloud);
-    view.rows.resize(static_cast<std::size_t>(view.cloud->values.rows()));
+    std::vector<Eigen::Index> rows(static_cast<std::size_t>(cloud->values.rows()));
 
-    std::iota(view.rows.begin(), view.rows.end(), Eigen::Index{0});
+    std::iota(rows.begin(), rows.end(), Eigen::Index{0});
 
-    return view;
+    return EigenCloudView(std::move(cloud), std::move(rows));
 }
 
 Eigen::ArrayXd EigenCloudView::compute_distances_to(const PlaneModel& plane) const {
@@ -79,15 +81,13 @@ EigenCloudView EigenCloudView::compute_inlier_view(const PlaneModel& plane, doub
 
     auto to_keep = argwhere(mask);
 
-    EigenCloudView result;
-    result.cloud = cloud;
-    result.rows.resize(static_cast<std::size_t>(to_keep.size()));
+    std::vector<Eigen::Index> result_rows(static_cast<std::size_t>(to_keep.size()));
 
     for (std::size_t i = 0; i < to_keep.size(); ++i) {
-        result.rows[i] = rows[static_cast<std::size_t>(to_keep[i])];
+        result_rows[i] = rows[static_cast<std::size_t>(to_keep[i])];
     }
 
-    return result;
+    return EigenCloudView(cloud, std::move(result_rows));
 }
 
 EigenCloudView EigenCloudView::subtract(const EigenCloudView& other) const {
@@ -101,18 +101,17 @@ EigenCloudView EigenCloudView::subtract(const EigenCloudView& other) const {
 
     std::unordered_set<Eigen::Index> other_rows_set(other.rows.begin(), other.rows.end());
 
-    EigenCloudView result;
-    result.cloud = cloud;
-
     size_t count_diff = 0;
 
     for (const auto& row : rows) if (other_rows_set.count(row) == 0) count_diff++;
 
-    result.rows.reserve(count_diff);
+    std::vector<Eigen::Index> result_rows;
 
-    for (const auto& row : rows) if (other_rows_set.count(row) == 0) result.rows.push_back(row);
+    result_rows.reserve(count_diff);
 
-    return result;
+    for (const auto& row : rows) if (other_rows_set.count(row) == 0) result_rows.push_back(row);
+
+    return EigenCloudView(cloud, std::move(result_rows));
 }
 
 PlaneModel EigenCloudView::fit_plane() const {
