@@ -29,3 +29,23 @@ PlaneModel PlaneModel::fit_from_points(const Eigen::MatrixXd& points) {
 
     return PlaneModel{normal, rho};
 }
+
+std::optional<PlaneModel> PlaneModel::fit_from_triplet(
+    const Eigen::Vector3d& p0,
+    const Eigen::Vector3d& p1,
+    const Eigen::Vector3d& p2,
+    double min_area
+) {
+    auto v1 = p1 - p0;
+    auto v2 = p2 - p0;
+
+    auto normal = v1.cross(v2);
+
+    if (normal.norm() / 2.0 < min_area) return std::nullopt;
+
+    normal.normalize();
+
+    double rho = normal.dot(p0);
+
+    return PlaneModel{normal, rho};
+}

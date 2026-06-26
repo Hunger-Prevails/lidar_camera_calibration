@@ -33,20 +33,13 @@ EigenCloud::EigenCloud(RowMatrixXd values_, std::vector<std::string> column_name
     : values(std::move(values_)), column_names(std::move(column_names_)) {}
 
 void EigenCloud::summary() const {
-    std::cout << "Eigen point cloud:" << std::endl;
-    std::cout << "=> rows: " << this->values.rows() << std::endl;
-    std::cout << "=> cols: " << this->values.cols() << std::endl;
+    std::cout << std::endl;
+    std::cout << "=> points: [" << this->values.rows() << " x " << this->values.cols() << "]" << std::endl;
     std::cout << "=> columns:";
 
-    for (const auto& name : this->column_names) {
-        std::cout << " " << name;
-    }
+    for (const auto& name : this->column_names) std::cout << " " << name;
 
     std::cout << std::endl;
-
-    if (this->values.rows() > 0) {
-        std::cout << "=> first row: " << this->values.row(0) << std::endl;
-    }
 }
 
 void EigenCloud::export_to(const fs::path& path) const {

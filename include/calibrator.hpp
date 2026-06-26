@@ -9,7 +9,7 @@
 # include <pcl/io/pcd_io.h>
 
 # include "eigen_cloud.hpp"
-# include "plane_candidate.hpp"
+# include "eigen_cloud_view.hpp"
 # include "plane_model.hpp"
 # include "utils.hpp"
 
@@ -37,20 +37,26 @@ class CheckerboardCalibrator : public Calibrator {
 protected:
     Eigen::Vector3d sphere_center;
     double sphere_radius;
-    double threshold;
+    double threshold_inliers;
+    double ransac_min_area;
     std::size_t max_planes;
     std::size_t min_inliers;
+    std::size_t ransac_iterations;
+    std::uint32_t random_seed;
 
     std::vector<PlaneCandidate> extract_plane_candidates(std::shared_ptr<const EigenCloud> cloud) const;
 
 public:
     CheckerboardCalibrator(
-        fs::path write_path,
-        Eigen::Vector3d sphere_center,
-        double sphere_radius,
-        double threshold,
-        std::size_t max_planes,
-        std::size_t min_inliers
+        fs::path write_path_,
+        Eigen::Vector3d sphere_center_,
+        double sphere_radius_,
+        double threshold_inliers_,
+        double ransac_min_area_,
+        std::size_t max_planes_,
+        std::size_t min_inliers_,
+        std::size_t ransac_iterations_,
+        std::uint32_t random_seed_
     );
     ~CheckerboardCalibrator() override = default;
 

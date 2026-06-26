@@ -28,3 +28,9 @@ struct EigenCloudView {
 
     PlaneModel fit_plane() const;
 };
+
+struct PlaneCandidate {
+    PlaneModel plane;
+
+    EigenCloudView inliers;
+};

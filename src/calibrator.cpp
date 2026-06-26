@@ -11,6 +11,7 @@
 # include <filesystem>
 # include <fstream>
 # include <iostream>
+# include <random>
 # include <stdexcept>
 # include <string>
 # include <vector>
@@ -18,14 +19,13 @@
 # include <opencv2/opencv.hpp>
 
 # include "calibrator.hpp"
-# include "eigen_cloud.hpp"
-# include "utils.hpp"
 
 namespace fs = std::filesystem;
 
 using PointT = pcl::PointXYZ;
 using CloudT = pcl::PointCloud<PointT>;
 using CloudPtr = CloudT::Ptr;
+using RandomState = std::mt19937;
 
 void Calibrator::append_as_column(std::vector<ScalarColumn>& columns, const pcl::PCLPointField& field) {
     const std::uint32_t count = std::max<std::uint32_t>(field.count, 1);
@@ -111,22 +111,97 @@ Calibrator::Calibrator(fs::path write_path) : write_path(std::move(write_path)) 
 }
 
 CheckerboardCalibrator::CheckerboardCalibrator(
-    fs::path write_path,
-    Eigen::Vector3d sphere_center,
-    double sphere_radius,
-    double threshold,
-    std::size_t max_planes,
-    std::size_t min_inliers
+    fs::path write_path_,
+    Eigen::Vector3d sphere_center_,
+    double sphere_radius_,
+    double threshold_inliers_,
+    double ransac_min_area_,
+    std::size_t max_planes_,
+    std::size_t min_inliers_,
+    std::size_t ransac_iterations_,
+    std::uint32_t random_seed_
 ) :
-    Calibrator(std::move(write_path)),
-    sphere_center(sphere_center),
-    sphere_radius(sphere_radius),
-    threshold(threshold),
-    max_planes(max_planes),
-    min_inliers(min_inliers) {}
+    Calibrator(std::move(write_path_)),
+    sphere_center(sphere_center_),
+    sphere_radius(sphere_radius_),
+    threshold_inliers(threshold_inliers_),
+    ransac_min_area(ransac_min_area_),
+    max_planes(max_planes_),
+    min_inliers(min_inliers_),
+    ransac_iterations(ransac_iterations_),
+    random_seed(random_seed_) {}
 
 std::vector<PlaneCandidate> CheckerboardCalibrator::extract_plane_candidates(std::shared_ptr<const EigenCloud> cloud) const {
-    return {};
+    if (!cloud) {
+        throw std::runtime_error("extractPlaneCandidates: null input cloud");
+    }
+
+    EigenCloudView remainder_view = EigenCloudView::from_eigen_cloud(cloud);
+
+    std::vector<PlaneCandidate> candidates;
+    candidates.reserve(static_cast<std::size_t>(max_planes));
+
+    RandomState random_state(random_seed);
+
+    while (candidates.size() < max_planes) {
+        std::uniform_int_distribution<Eigen::Index> dist(
+            0,
+            remainder_view.size() - 1
+        );
+
+        std::optional<PlaneCandidate> best_candidate;
+
+        for (int iter = 0; iter < ransac_iterations; ++iter) {
+            const Eigen::Index a = dist(random_state);
+            const Eigen::Index b = dist(random_state);
+            const Eigen::Index c = dist(random_state);
+
+            if (a == b || a == c || b == c) {
+                continue;
+            }
+
+            const Eigen::Vector3d p0 = remainder_view.xyz_at(a);
+            const Eigen::Vector3d p1 = remainder_view.xyz_at(b);
+            const Eigen::Vector3d p2 = remainder_view.xyz_at(c);
+
+            if (!p0.allFinite() || !p1.allFinite() || !p2.allFinite()) {
+                continue;
+            }
+
+            const auto candidate_plane = PlaneModel::fit_from_triplet(p0, p1, p2, ransac_min_area);
+
+            if (!candidate_plane.has_value()) continue;
+
+            auto inliers_view = remainder_view.compute_inlier_view(
+                candidate_plane.value(), threshold_inliers
+            );
+
+            if (!best_candidate.has_value() || inliers_view.size() > best_candidate->inliers.size()) {
+                best_candidate = PlaneCandidate{
+                    .plane = std::move(candidate_plane.value()),
+                    .inliers = std::move(inliers_view),
+                };
+            }
+        }
+
+        if (!best_candidate.has_value()) break;
+
+        auto final_plane = best_candidate->inliers.fit_plane();
+
+        auto final_inliers = remainder_view.compute_inlier_view(final_plane, threshold_inliers);
+
+        if (final_inliers.size() < min_inliers) break;
+
+        remainder_view = remainder_view.subtract(final_inliers);
+
+        candidates.push_back(
+            PlaneCandidate{
+                .plane = std::move(final_plane),
+                .inliers = std::move(final_inliers),
+            }
+        );
+    }
+    return candidates;
 }
 
 void CheckerboardCalibrator::calibrate(std::vector<std::pair<fs::path, fs::path>> image_cloud_pairs, Eigen::Matrix3d& intrinsics) {
@@ -158,6 +233,14 @@ void CheckerboardCalibrator::calibrate(std::vector<std::pair<fs::path, fs::path>
         cropped_cloud->export_to(write_path / (point_cloud_path.stem().string() + "_cropped.pcd"));
 
         auto plane_candidates = extract_plane_candidates(cropped_cloud);
+
+        std::cout << "=> extracts " << plane_candidates.size() << " plane candidates in " << image_path.stem().string() << std::endl;
+
+        for (size_t i = 0; i < plane_candidates.size(); ++i) {
+            const auto plane_cloud = plane_candidates[i].inliers.to_eigen_cloud();
+
+            plane_cloud.export_to(write_path / (point_cloud_path.stem().string() + "_plane_" + std::to_string(i) + ".pcd"));
+        }
 
         auto image = cv::imread(image_path.string(), cv::IMREAD_COLOR);
 

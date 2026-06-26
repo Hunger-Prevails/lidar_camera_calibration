@@ -94,9 +94,12 @@ int main(int argc, char *argv[]) {
         ("write-path", "Path to write outputs to", cxxopts::value<fs::path>()->default_value("outputs"))
         ("center", "Spherical crop center in LiDAR frame: x,y,z", cxxopts::value<std::vector<double>>()->default_value("0.0,0.0,0.0"))
         ("radius", "Spherical crop radius in meters", cxxopts::value<double>()->default_value("3.0"))
-        ("threshold", "Distance threshold for plane inliers in meters", cxxopts::value<double>()->default_value("0.02"))
-        ("max_planes", "Maximum number of planes to extract per frame", cxxopts::value<std::size_t>()->default_value("5"))
-        ("min_inliers", "Minimum number of inliers to consider a plane valid", cxxopts::value<std::size_t>()->default_value("100"))
+        ("threshold-inliers", "Distance threshold for plane inliers in meters", cxxopts::value<double>()->default_value("0.02"))
+        ("ransac-min-area", "Minimum area of the triangle to qualify for RANSAC", cxxopts::value<double>()->default_value("0.01"))
+        ("max-planes", "Maximum number of planes to extract per frame", cxxopts::value<std::size_t>()->default_value("3"))
+        ("min-inliers", "Minimum number of inliers to consider a plane valid", cxxopts::value<std::size_t>()->default_value("128"))
+        ("ransac-iterations", "Number of RANSAC iterations for plane extraction", cxxopts::value<std::size_t>()->default_value("1000"))
+        ("random-seed", "Random seed for plane extraction", cxxopts::value<std::uint32_t>()->default_value("42"))
         ("help", "Print help");
 
     auto args = options.parse(argc, argv);
@@ -119,9 +122,12 @@ int main(int argc, char *argv[]) {
         args["write-path"].as<fs::path>(),
         center_eigen,
         args["radius"].as<double>(),
-        args["threshold"].as<double>(),
-        args["max_planes"].as<std::size_t>(),
-        args["min_inliers"].as<std::size_t>()
+        args["threshold-inliers"].as<double>(),
+        args["ransac-min-area"].as<double>(),
+        args["max-planes"].as<std::size_t>(),
+        args["min-inliers"].as<std::size_t>(),
+        args["ransac-iterations"].as<std::size_t>(),
+        args["random-seed"].as<std::uint32_t>()
     );
 
     auto dataset_path = args["dataset"].as<fs::path>();

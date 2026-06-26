@@ -9,7 +9,6 @@ add_library(
         calibrator.cpp
         eigen_cloud.cpp
         eigen_cloud_view.cpp
-        plane_candidate.cpp
         plane_model.cpp
         utils.cpp
 )
