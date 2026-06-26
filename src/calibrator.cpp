@@ -111,8 +111,23 @@ Calibrator::Calibrator(fs::path write_path) : write_path(std::move(write_path)) 
 }
 
 CheckerboardCalibrator::CheckerboardCalibrator(
-    fs::path write_path, Eigen::Vector3d sphere_center, double sphere_radius
-) : Calibrator(std::move(write_path)), sphere_center(sphere_center), sphere_radius(sphere_radius) {}
+    fs::path write_path,
+    Eigen::Vector3d sphere_center,
+    double sphere_radius,
+    double threshold,
+    std::size_t max_planes,
+    std::size_t min_inliers
+) :
+    Calibrator(std::move(write_path)),
+    sphere_center(sphere_center),
+    sphere_radius(sphere_radius),
+    threshold(threshold),
+    max_planes(max_planes),
+    min_inliers(min_inliers) {}
+
+std::vector<PlaneCandidate> CheckerboardCalibrator::extract_plane_candidates(std::shared_ptr<const EigenCloud> cloud) const {
+    return {};
+}
 
 void CheckerboardCalibrator::calibrate(std::vector<std::pair<fs::path, fs::path>> image_cloud_pairs, Eigen::Matrix3d& intrinsics) {
     indicators::ProgressBar bar{
@@ -141,6 +156,8 @@ void CheckerboardCalibrator::calibrate(std::vector<std::pair<fs::path, fs::path>
 
         cropped_cloud->summary();
         cropped_cloud->export_to(write_path / (point_cloud_path.stem().string() + "_cropped.pcd"));
+
+        auto plane_candidates = extract_plane_candidates(cropped_cloud);
 
         auto image = cv::imread(image_path.string(), cv::IMREAD_COLOR);
 

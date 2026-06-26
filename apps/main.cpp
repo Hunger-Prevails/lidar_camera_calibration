@@ -94,6 +94,9 @@ int main(int argc, char *argv[]) {
         ("write-path", "Path to write outputs to", cxxopts::value<fs::path>()->default_value("outputs"))
         ("center", "Spherical crop center in LiDAR frame: x,y,z", cxxopts::value<std::vector<double>>()->default_value("0.0,0.0,0.0"))
         ("radius", "Spherical crop radius in meters", cxxopts::value<double>()->default_value("3.0"))
+        ("threshold", "Distance threshold for plane inliers in meters", cxxopts::value<double>()->default_value("0.02"))
+        ("max_planes", "Maximum number of planes to extract per frame", cxxopts::value<std::size_t>()->default_value("5"))
+        ("min_inliers", "Minimum number of inliers to consider a plane valid", cxxopts::value<std::size_t>()->default_value("100"))
         ("help", "Print help");
 
     auto args = options.parse(argc, argv);
@@ -113,7 +116,12 @@ int main(int argc, char *argv[]) {
     Eigen::Vector3d center_eigen(center[0], center[1], center[2]);
 
     auto calibrator = std::make_unique<CheckerboardCalibrator>(
-        args["write-path"].as<fs::path>(), center_eigen, args["radius"].as<double>()
+        args["write-path"].as<fs::path>(),
+        center_eigen,
+        args["radius"].as<double>(),
+        args["threshold"].as<double>(),
+        args["max_planes"].as<std::size_t>(),
+        args["min_inliers"].as<std::size_t>()
     );
 
     auto dataset_path = args["dataset"].as<fs::path>();

@@ -23,7 +23,7 @@ PlaneModel PlaneModel::fit_from_points(const Eigen::MatrixXd& points) {
 
     if (solver.info() != Eigen::Success) throw std::runtime_error("Eigen decomposition failed.");
 
-    Eigen::Vector3d normal = solver.eigenvectors().col(0);
+    Eigen::Vector3d normal = solver.eigenvectors().col(0).normalized();
 
     double rho = normal.dot(centroid);
 
